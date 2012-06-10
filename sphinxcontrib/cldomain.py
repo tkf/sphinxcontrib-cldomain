@@ -95,7 +95,18 @@ lisp_types = {
 }
 
 
-class CLsExp(ObjectDescription):
+class CLDomainName(object):
+
+    """A mix-in class that makes domain prefix configurable."""
+
+    _domain_name = 'cl'
+
+    @property
+    def _package(self):
+        return "{0}:package".format(self._domain_name)
+
+
+class CLsExp(ObjectDescription, CLDomainName):
 
     doc_field_types = [
         GroupedField('parameter', label=l_('Parameters'),
@@ -136,7 +147,7 @@ class CLsExp(ObjectDescription):
             else:
                 signode.append(addnodes.desc_parameter(token, token))
 
-        package = self.env.temp_data.get('cl:package')
+        package = self.env.temp_data.get(self._package)
 
         objtype = self.get_signature_prefix(sig)
         signode.append(addnodes.desc_annotation(objtype, objtype))
@@ -170,9 +181,9 @@ class CLsExp(ObjectDescription):
         # note target
         type, name = name
 
-        if 'cl:package' in self.env.temp_data:
+        if self._package in self.env.temp_data:
             package = self.options.get(
-                'module', self.env.temp_data.get('cl:package'))
+                'module', self.env.temp_data.get(self._package))
             name = package + ":" + name
         else:
             package = ""
@@ -182,7 +193,7 @@ class CLsExp(ObjectDescription):
             signode['ids'].append(name)
             signode['first'] = (not self.names)
             self.state.document.note_explicit_target(signode)
-            inv = self.env.domaindata['cl']['symbols']
+            inv = self.env.domaindata[self._domain_name]['symbols']
             if name in inv:
                 self.state_machine.reporter.warning(
                     'duplicate symbol description of %s, ' % name +
@@ -197,7 +208,7 @@ class CLsExp(ObjectDescription):
     def run(self):
         result = super(CLsExp, self).run()
         if "nodoc" not in self.options:
-            package = self.env.temp_data.get('cl:package')
+            package = self.env.temp_data.get(self._package)
             node = addnodes.desc_content()
             string = doc_strings.get(package).get(self.names[0][1], "")
             lines = string2lines(string)
@@ -219,7 +230,7 @@ class CLsExp(ObjectDescription):
         return result
 
 
-class CLCurrentPackage(Directive):
+class CLCurrentPackage(Directive, CLDomainName):
     """
     This directive is just to tell Sphinx that we're documenting stuff in
     namespace foo.
@@ -233,7 +244,7 @@ class CLCurrentPackage(Directive):
 
     def run(self):
         env = self.state.document.settings.env
-        env.temp_data['cl:package'] = self.arguments[0].upper()
+        env.temp_data[self._package] = self.arguments[0].upper()
         #index_package(self.arguments[0].upper())
         return []
 
